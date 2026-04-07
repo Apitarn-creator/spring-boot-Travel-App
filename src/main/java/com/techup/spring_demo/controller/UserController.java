@@ -55,4 +55,17 @@ public class UserController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    // รับ Request แบบ GET ที่ URL: /api/users/{id}
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getUserProfile(@PathVariable Long id) {
+        try {
+            UserEntity user = userService.getUserById(id);
+            // 💡 แอบลบรหัสผ่านทิ้งก่อนส่งกลับไปหน้าบ้าน (เพื่อความปลอดภัย)
+            user.setPassword(null); 
+            return ResponseEntity.ok(user);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }

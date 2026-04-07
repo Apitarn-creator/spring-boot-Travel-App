@@ -39,6 +39,10 @@ public class UserEntity {
     @Column(name = "avatar_url", length = 255)
     private String avatarUrl;
 
+    // 💡 บอก Spring Boot ว่า User 1 คน มี Profile ได้ 1 อัน
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private UserProfileEntity profile;
+    
     @Column(name = "created_at", updatable = false)
     private OffsetDateTime createdAt;
 
