@@ -17,4 +17,7 @@ public interface TripRepository extends JpaRepository<TripEntity, Long> {
     // 2. หาโพสต์ที่ตัวเองเคยไปคอมเมนต์ (ใช้ Subquery ดึงเฉพาะทริปที่มีคอมเมนต์ของเรา)
     @Query("SELECT t FROM TripEntity t WHERE t.id IN (SELECT c.tripId FROM TripCommentEntity c WHERE c.user.id = :userId) ORDER BY t.id DESC")
     List<TripEntity> findTripsCommentedByUser(@Param("userId") Long userId);
+
+    @Query(value = "SELECT * FROM trips WHERE title ILIKE CONCAT('%', :keyword, '%') OR CAST(tags AS text) ILIKE CONCAT('%', :keyword, '%') ORDER BY id DESC", nativeQuery = true)
+    List<TripEntity> searchTrips(@Param("keyword") String keyword);
 }

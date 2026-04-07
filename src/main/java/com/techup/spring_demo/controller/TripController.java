@@ -28,8 +28,11 @@ public class TripController {
     private UserRepository userRepository;
 
     @GetMapping
-    public ResponseEntity<List<TripEntity>> getAllTrips() {
-        return ResponseEntity.ok(tripService.getAllTrips());
+    public ResponseEntity<List<TripEntity>> getAllTrips(
+         @RequestParam(required = false) String search) { // รับค่า search แบบไม่บังคับ
+            
+        List<TripEntity> trips = tripService.getAllTrips(search);
+        return ResponseEntity.ok(trips);
     }
 
     @GetMapping("/{id}")

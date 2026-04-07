@@ -14,7 +14,12 @@ public class TripService {
     private TripRepository tripRepository;
 
     // 1. ดึงข้อมูลทริปทั้งหมด (โชว์หน้าแรก)
-    public List<TripEntity> getAllTrips() {
+    public List<TripEntity> getAllTrips(String keyword) {
+        // ถ้ามีการพิมพ์คำค้นหามา ให้ไปเรียกคำสั่งค้นหาใน Repository
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            return tripRepository.searchTrips(keyword);
+        }
+        // ถ้าไม่ได้ค้นหาอะไรเลย ให้ดึงทริปทั้งหมดตามปกติ
         return tripRepository.findAll();
     }
 
