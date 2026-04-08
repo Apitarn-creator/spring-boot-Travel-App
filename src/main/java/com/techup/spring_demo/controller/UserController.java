@@ -5,7 +5,9 @@ import com.techup.spring_demo.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.techup.spring_demo.security.JwtUtils;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -15,6 +17,9 @@ public class UserController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private JwtUtils jwtUtils;
 
     // เปิดรับ Request แบบ POST ที่ URL: /api/users/register
     @PostMapping("/register")
@@ -32,14 +37,26 @@ public class UserController {
 
     // เพิ่มฟังก์ชันนี้ต่อจากฟังก์ชัน registerUser
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody Map<String, String> credentials) {
+    public ResponseEntity<?> loginUser(@RequestBody Map<String, String> payload) {
         try {
-            String email = credentials.get("email");
-            String password = credentials.get("password");
-            
+            String email = payload.get("email");
+            String password = payload.get("password");
+
+            // ดึงข้อมูลผู้ใช้มาตรวจสอบ (ผ่าน UserService ของคุณ)
             UserEntity user = userService.loginUser(email, password);
-            return ResponseEntity.ok(user); // ถ้าสำเร็จ ส่งข้อมูลผู้ใช้กลับไปให้หน้าบ้าน
             
+            // 💡 สร้าง Token (บัตรพนักงาน) จากอีเมล
+            String jwtToken = jwtUtils.generateTokenFromEmail(user.getEmail());
+
+            user.setPassword(null); // ซ่อนรหัสผ่านไว้ ไม่ส่งกลับไปหน้าบ้าน
+
+            // 💡 แพ็ค Token และข้อมูล User ส่งกลับไปเป็นคู่กัน
+            Map<String, Object> responseBody = new HashMap<>();
+            responseBody.put("token", jwtToken);
+            responseBody.put("user", user);
+
+            return ResponseEntity.ok(responseBody);
+
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -63,6 +80,18 @@ public class UserController {
             UserEntity user = userService.getUserById(id);
             // 💡 แอบลบรหัสผ่านทิ้งก่อนส่งกลับไปหน้าบ้าน (เพื่อความปลอดภัย)
             user.setPassword(null); 
+            return ResponseEntity.ok(user);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    // 💡 Endpoint ใหม่ สำหรับดึงข้อมูลโปรไฟล์จาก Username
+    @GetMapping("/username/{username}")
+    public ResponseEntity<?> getUserByUsername(@PathVariable String username) {
+        try {
+            UserEntity user = userService.getUserByUsername(username);
+            user.setPassword(null); // ซ่อนรหัสผ่านเพื่อความปลอดภัย
             return ResponseEntity.ok(user);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());

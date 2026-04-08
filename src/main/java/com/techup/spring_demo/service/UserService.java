@@ -71,4 +71,9 @@ public class UserService {
         return userRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("ไม่พบผู้ใช้งานนี้ในระบบ"));
     }
+
+    public UserEntity getUserByUsername(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("ไม่พบผู้ใช้งานนี้"));
+    }
 }
