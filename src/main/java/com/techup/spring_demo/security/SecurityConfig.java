@@ -42,7 +42,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/users/login", "/api/users/register").permitAll() // สมัคร/ล็อกอิน
                 .requestMatchers(HttpMethod.GET, "/api/trips/**").permitAll() // อ่านทริป
                 .requestMatchers(HttpMethod.GET, "/api/users/**").permitAll() // ดูโปรไฟล์คนอื่น
-                
+                .requestMatchers("/api/users/google-login").permitAll()
                 // 🔴 โซนหวงห้าม (ที่เหลือทั้งหมด เช่น สร้างทริป, คอมเมนต์ ต้องมี Token!)
                 .anyRequest().authenticated()
             );
