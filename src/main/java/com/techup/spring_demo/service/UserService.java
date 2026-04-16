@@ -5,6 +5,7 @@ import com.techup.spring_demo.entity.AuthProvider;
 import com.techup.spring_demo.entity.UserProfileEntity;
 import com.techup.spring_demo.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -13,22 +14,34 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
+    // ✅ [Security Fix #1] inject PasswordEncoder (BCrypt) เข้ามาใช้เข้ารหัสรหัสผ่าน
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     // 1. ฟังก์ชันสมัครสมาชิก
     public UserEntity registerUser(UserEntity user) {
         if (userRepository.existsByEmail(user.getEmail())) {
             throw new RuntimeException("อีเมลนี้ถูกใช้งานแล้ว กรุณาใช้อีเมลอื่น");
         }
         user.setAuthProvider(AuthProvider.LOCAL);
+
+        // ✅ [Security Fix #1] เข้ารหัสรหัสผ่านก่อน save ลง DB ทุกครั้ง
+        // ผลลัพธ์จะเป็น hash เช่น "$2a$10$..." แทนที่จะเป็น plaintext
+        if (user.getPassword() != null && !user.getPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        }
+
         return userRepository.save(user);
     }
 
     // 2. ฟังก์ชันเข้าสู่ระบบ
     public UserEntity loginUser(String email, String password) {
         UserEntity user = userRepository.findByEmail(email)
-            .orElseThrow(() -> new RuntimeException("ไม่พบบัญชีผู้ใช้นี้ในระบบ"));
+            .orElseThrow(() -> new RuntimeException("อีเมลหรือรหัสผ่านไม่ถูกต้อง")); // ✅ ไม่บอกว่า email ไม่มีในระบบ (ป้องกัน user enumeration)
 
-        if (password == null || !password.equals(user.getPassword())) {
-            throw new RuntimeException("รหัสผ่านไม่ถูกต้อง");
+        // ✅ [Security Fix #1] ใช้ passwordEncoder.matches() เปรียบเทียบ plaintext กับ hash ใน DB
+        if (password == null || !passwordEncoder.matches(password, user.getPassword())) {
+            throw new RuntimeException("อีเมลหรือรหัสผ่านไม่ถูกต้อง"); // ✅ ข้อความ error เดียวกัน ป้องกัน user enumeration
         }
 
         return user;

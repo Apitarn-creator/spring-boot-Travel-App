@@ -2,6 +2,7 @@ package com.techup.spring_demo.security;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
@@ -10,11 +11,14 @@ import java.util.Date;
 @Component
 public class JwtUtils {
 
-    // 💡 รหัสลับสำหรับเซ็นรับรอง Token (ต้องมีความยาวระดับนึง ห้ามบอกใคร!)
-    private final String jwtSecret = "TravelBetterSecretKeyForJwtAuthentication1234567890";
-    
-    // 💡 เวลาหมดอายุของ Token (ตั้งไว้ที่ 24 ชั่วโมง = 86,400,000 มิลลิวินาที)
-    private final int jwtExpirationMs = 86400000;
+    // ✅ [Security Fix #2] โหลด Secret จาก environment variable แทนการฝังใน code
+    // ค่าจะถูกอ่านจาก JWT_SECRET ใน environment หรือ application.properties
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
+    // ✅ [Security Fix #2] อ่านค่า expiration จาก config ได้เลย ไม่ต้อง hardcode
+    @Value("${jwt.expiration-ms:86400000}")
+    private int jwtExpirationMs;
 
     // ฟังก์ชันแปลงตัวอักษรให้กลายเป็นกุญแจเข้ารหัส
     private Key getSigningKey() {

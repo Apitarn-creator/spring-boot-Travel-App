@@ -36,7 +36,7 @@ public class UserEntity {
     @Column(name = "provider_id", length = 255)
     private String providerId;
 
-    @Column(name = "avatar_url", length = 255)
+    @Column(name = "avatar_url", columnDefinition = "text")
     private String avatarUrl;
 
     // 💡 บอก Spring Boot ว่า User 1 คน มี Profile ได้ 1 อัน

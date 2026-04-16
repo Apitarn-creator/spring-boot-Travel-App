@@ -34,6 +34,11 @@ public class TripService {
         return tripRepository.save(trip);
     }
 
+    // ✅ บันทึกทริป (ใช้กับ like/unlike)
+    public TripEntity saveTrip(TripEntity trip) {
+        return tripRepository.save(trip);
+    }
+
     // ดึงทริปที่ตัวเองสร้าง
     public List<TripEntity> getTripsByAuthor(Long authorId) {
         return tripRepository.findByAuthorIdOrderByIdDesc(authorId);

@@ -32,6 +32,15 @@ public class TripEntity {
     @Column(name = "author_id")
     private Long authorId;
 
+    // ✅ like count
+    @Column(name = "likes", nullable = false, columnDefinition = "integer default 0")
+    private Integer likes = 0;
+
+    // เก็บ userId ที่กด like ไว้เป็น comma-separated string เช่น "1,5,23"
+    // ใช้ text แทน array เพื่อให้ Hibernate map ได้ง่าย
+    @Column(name = "liked_by_str", columnDefinition = "text default ''")
+    private String likedByStr = "";
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private OffsetDateTime createdAt;
 
