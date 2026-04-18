@@ -20,4 +20,24 @@ public interface TripRepository extends JpaRepository<TripEntity, Long> {
 
     @Query(value = "SELECT * FROM trips WHERE title ILIKE CONCAT('%', :keyword, '%') OR CAST(tags AS text) ILIKE CONCAT('%', :keyword, '%') ORDER BY id DESC", nativeQuery = true)
     List<TripEntity> searchTrips(@Param("keyword") String keyword);
+
+    // ✅ ค้นหา + filter tag + sort
+    @Query(value = """
+        SELECT * FROM trips
+        WHERE (:keyword IS NULL OR title ILIKE CONCAT('%', :keyword, '%')
+               OR CAST(tags AS text) ILIKE CONCAT('%', :keyword, '%'))
+          AND (:tag IS NULL OR CAST(tags AS text) ILIKE CONCAT('%', :tag, '%'))
+        ORDER BY
+          CASE WHEN :sort = 'likes' THEN likes END DESC NULLS LAST,
+          CASE WHEN :sort = 'latest' OR :sort IS NULL THEN id END DESC NULLS LAST
+        """, nativeQuery = true)
+    List<TripEntity> searchAdvanced(
+        @Param("keyword") String keyword,
+        @Param("tag") String tag,
+        @Param("sort") String sort
+    );
+
+    // ✅ ดึง distinct tags ทั้งหมด (สำหรับ tag suggestions)
+    @Query(value = "SELECT DISTINCT unnest(tags) FROM trips ORDER BY 1", nativeQuery = true)
+    List<String> findAllTags();
 }

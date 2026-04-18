@@ -38,6 +38,9 @@ public class UserController {
     @Autowired
     private com.techup.spring_demo.service.TripService tripServiceRef;
 
+    @Autowired
+    private com.techup.spring_demo.service.NotificationService notificationService;
+
     // ✅ อ่าน Google Client ID จาก environment variable (ต้องตรงกับ Frontend)
     @Value("${google.client-id}")
     private String googleClientId;
@@ -231,6 +234,34 @@ public class UserController {
         }
     }
 
+    // ✅ ค้นหา user ตาม username หรือ nickname
+    @GetMapping("/search")
+    public ResponseEntity<?> searchUsers(@RequestParam String q) {
+        if (q == null || q.trim().isEmpty())
+            return ResponseEntity.ok(java.util.Collections.emptyList());
+
+        String query = q.trim().toLowerCase();
+        java.util.List<java.util.Map<String, Object>> results = userRepository.findAll().stream()
+            .filter(u -> {
+                String username = u.getUsername() != null ? u.getUsername().toLowerCase() : "";
+                String nickname = (u.getProfile() != null && u.getProfile().getNickname() != null)
+                    ? u.getProfile().getNickname().toLowerCase() : "";
+                return username.contains(query) || nickname.contains(query);
+            })
+            .limit(10)
+            .map(u -> {
+                java.util.Map<String, Object> m = new java.util.HashMap<>();
+                m.put("id", u.getId());
+                m.put("username", u.getUsername());
+                m.put("avatarUrl", u.getAvatarUrl());
+                m.put("nickname", u.getProfile() != null ? u.getProfile().getNickname() : null);
+                return m;
+            })
+            .collect(java.util.stream.Collectors.toList());
+
+        return ResponseEntity.ok(results);
+    }
+
     // 💡 Endpoint ใหม่ สำหรับดึงข้อมูลโปรไฟล์จาก Username
     @GetMapping("/username/{username}")
     public ResponseEntity<?> getUserByUsername(@PathVariable String username) {
@@ -338,6 +369,12 @@ public class UserController {
             if (wasFollowing) { list.remove(targetStr); } else { list.add(targetStr); }
             me.setFollowing(String.join(",", list));
             userRepository.save(me);
+
+            // ✅ แจ้งเตือนเมื่อมีคน follow (ไม่แจ้งตอน unfollow)
+            if (!wasFollowing) {
+                try { notificationService.notifyFollow(targetId, me); }
+                catch (Exception ignored) {}
+            }
 
             java.util.Map<String, Object> res = new java.util.HashMap<>();
             res.put("following", !wasFollowing);

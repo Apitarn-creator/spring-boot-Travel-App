@@ -27,12 +27,29 @@ public class TripController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private com.techup.spring_demo.service.NotificationService notificationService;
+
     @GetMapping
     public ResponseEntity<List<TripEntity>> getAllTrips(
-         @RequestParam(required = false) String search) { // รับค่า search แบบไม่บังคับ
-            
+         @RequestParam(required = false) String search) {
         List<TripEntity> trips = tripService.getAllTrips(search);
         return ResponseEntity.ok(trips);
+    }
+
+    // ✅ Advanced search endpoint
+    @GetMapping("/search")
+    public ResponseEntity<List<TripEntity>> searchTrips(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String tag,
+            @RequestParam(required = false, defaultValue = "latest") String sort) {
+        return ResponseEntity.ok(tripService.searchAdvanced(keyword, tag, sort));
+    }
+
+    // ✅ ดึง tag ทั้งหมด
+    @GetMapping("/tags")
+    public ResponseEntity<List<String>> getAllTags() {
+        return ResponseEntity.ok(tripService.getAllTags());
     }
 
     @GetMapping("/{id}")
@@ -72,6 +89,16 @@ public class TripController {
             comment.setUser(currentUser);
 
             commentRepository.save(comment);
+
+            // ✅ แจ้งเตือนเจ้าของทริป
+            try {
+                TripEntity trip = tripService.getTripById(id);
+                if (trip.getAuthorId() != null) {
+                    notificationService.notifyComment(
+                        trip.getAuthorId(), currentUser, id, trip.getTitle()
+                    );
+                }
+            } catch (Exception ignored) {}
             
             currentUser.setPassword(null);
             return ResponseEntity.ok(comment);
@@ -122,6 +149,16 @@ public class TripController {
             trip.setLikedByStr(String.join(",", likedList));
 
             TripEntity saved = tripService.saveTrip(trip);
+
+            // ✅ แจ้งเตือนเจ้าของทริปเมื่อมีคน like (ไม่แจ้งตอน unlike)
+            if (!alreadyLiked && trip.getAuthorId() != null) {
+                try {
+                    notificationService.notifyLike(
+                        trip.getAuthorId(), currentUser, id, trip.getTitle()
+                    );
+                } catch (Exception ignored) {}
+            }
+
             java.util.Map<String, Object> res = new java.util.HashMap<>();
             res.put("likes", saved.getLikes());
             res.put("liked", !alreadyLiked);

@@ -39,6 +39,19 @@ public class TripService {
         return tripRepository.save(trip);
     }
 
+    // ✅ Advanced search — keyword + tag + sort
+    public java.util.List<TripEntity> searchAdvanced(String keyword, String tag, String sort) {
+        String kw = (keyword != null && !keyword.trim().isEmpty()) ? keyword.trim() : null;
+        String t  = (tag != null && !tag.trim().isEmpty()) ? tag.trim() : null;
+        String s  = (sort != null && !sort.trim().isEmpty()) ? sort.trim() : "latest";
+        return tripRepository.searchAdvanced(kw, t, s);
+    }
+
+    // ✅ ดึง all tags
+    public java.util.List<String> getAllTags() {
+        return tripRepository.findAllTags();
+    }
+
     // ดึงทริปที่ตัวเองสร้าง
     public List<TripEntity> getTripsByAuthor(Long authorId) {
         return tripRepository.findByAuthorIdOrderByIdDesc(authorId);

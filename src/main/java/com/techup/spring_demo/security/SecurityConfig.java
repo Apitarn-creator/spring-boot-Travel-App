@@ -56,6 +56,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/users/me/**").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/users/*/bookmark").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/users/*/follow").authenticated()
+                .requestMatchers("/api/notifications/**").authenticated()
                 // 🔴 โซนหวงห้าม
                 .anyRequest().authenticated()
             );
