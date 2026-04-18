@@ -39,6 +39,14 @@ public class UserEntity {
     @Column(name = "avatar_url", columnDefinition = "text")
     private String avatarUrl;
 
+    // ✅ เก็บ tripId ที่ bookmark ไว้ เป็น comma-separated string เช่น "3,7,14"
+    @Column(name = "bookmarked_trips", columnDefinition = "text default ''")
+    private String bookmarkedTrips = "";
+
+    // ✅ Follow system — เก็บ userId ที่ตัวเองกำลัง follow อยู่
+    @Column(name = "following", columnDefinition = "text default ''")
+    private String following = "";
+
     // 💡 บอก Spring Boot ว่า User 1 คน มี Profile ได้ 1 อัน
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private UserProfileEntity profile;

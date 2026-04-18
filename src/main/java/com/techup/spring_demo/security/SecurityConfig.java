@@ -52,6 +52,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/users/login", "/api/users/register").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/trips/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/users/**").permitAll()
+                // bookmark และ me endpoints ต้อง login ก่อน
+                .requestMatchers("/api/users/me/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/users/*/bookmark").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/users/*/follow").authenticated()
                 // 🔴 โซนหวงห้าม
                 .anyRequest().authenticated()
             );

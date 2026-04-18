@@ -35,6 +35,9 @@ public class UserController {
     @Autowired
     private JwtUtils jwtUtils;
 
+    @Autowired
+    private com.techup.spring_demo.service.TripService tripServiceRef;
+
     // ✅ อ่าน Google Client ID จาก environment variable (ต้องตรงกับ Frontend)
     @Value("${google.client-id}")
     private String googleClientId;
@@ -233,12 +236,168 @@ public class UserController {
     public ResponseEntity<?> getUserByUsername(@PathVariable String username) {
         try {
             UserEntity user = userService.getUserByUsername(username);
-            user.setPassword(null); // ซ่อนรหัสผ่านเพื่อความปลอดภัย
+            user.setPassword(null);
             return ResponseEntity.ok(user);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
-    
+    // ✅ Toggle Bookmark — กด bookmark / ยกเลิก bookmark
+    @PostMapping("/{id}/bookmark")
+    public ResponseEntity<?> toggleBookmark(
+            @PathVariable Long id,
+            org.springframework.security.core.Authentication authentication) {
+        try {
+            UserEntity currentUser = (UserEntity) authentication.getPrincipal();
+
+            // ต้อง bookmark trip ของตัวเองหรือคนอื่นก็ได้ ไม่ต้องเช็ค ownership
+            // เช็คแค่ว่า trip มีอยู่จริง
+            // (ถ้า trip ไม่มี TripService จะ throw exception เอง)
+
+            String bookmarked = currentUser.getBookmarkedTrips() != null
+                ? currentUser.getBookmarkedTrips() : "";
+
+            java.util.List<String> list = new java.util.ArrayList<>(
+                bookmarked.isEmpty() ? java.util.Collections.emptyList()
+                    : java.util.Arrays.asList(bookmarked.split(","))
+            );
+
+            String tripIdStr = id.toString();
+            boolean wasBookmarked = list.contains(tripIdStr);
+
+            if (wasBookmarked) {
+                list.remove(tripIdStr);
+            } else {
+                list.add(tripIdStr);
+            }
+
+            currentUser.setBookmarkedTrips(String.join(",", list));
+            userRepository.save(currentUser);
+
+            // อัปเดต localStorage ด้วยการส่งข้อมูล user กลับไป
+            currentUser.setPassword(null);
+            java.util.Map<String, Object> res = new java.util.HashMap<>();
+            res.put("bookmarked", !wasBookmarked);
+            res.put("bookmarkedTrips", currentUser.getBookmarkedTrips());
+            return ResponseEntity.ok(res);
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("เกิดข้อผิดพลาด: " + e.getMessage());
+        }
+    }
+
+    // ✅ ดึง trips ที่ bookmark ไว้ (เฉพาะเจ้าของเท่านั้น — ต้องส่ง JWT)
+    @GetMapping("/me/bookmarks")
+    public ResponseEntity<?> getMyBookmarks(
+            org.springframework.security.core.Authentication authentication) {
+        try {
+            UserEntity currentUser = (UserEntity) authentication.getPrincipal();
+            String bookmarked = currentUser.getBookmarkedTrips();
+
+            if (bookmarked == null || bookmarked.isEmpty()) {
+                return ResponseEntity.ok(java.util.Collections.emptyList());
+            }
+
+            java.util.List<com.techup.spring_demo.entity.TripEntity> trips =
+                java.util.Arrays.stream(bookmarked.split(","))
+                    .filter(s -> !s.isEmpty())
+                    .map(s -> {
+                        try { return tripServiceRef.getTripById(Long.parseLong(s)); }
+                        catch (Exception e) { return null; }
+                    })
+                    .filter(t -> t != null)
+                    .collect(java.util.stream.Collectors.toList());
+
+            return ResponseEntity.ok(trips);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("เกิดข้อผิดพลาด: " + e.getMessage());
+        }
+    }
+
+    // ✅ Toggle Follow / Unfollow
+    @PostMapping("/{targetId}/follow")
+    public ResponseEntity<?> toggleFollow(
+            @PathVariable Long targetId,
+            org.springframework.security.core.Authentication authentication) {
+        try {
+            UserEntity me = (UserEntity) authentication.getPrincipal();
+            if (me.getId().equals(targetId))
+                return ResponseEntity.badRequest().body("ไม่สามารถ follow ตัวเองได้");
+
+            userRepository.findById(targetId)
+                .orElseThrow(() -> new RuntimeException("ไม่พบผู้ใช้งานนี้"));
+
+            String following = me.getFollowing() != null ? me.getFollowing() : "";
+            java.util.List<String> list = new java.util.ArrayList<>(
+                following.isEmpty() ? java.util.Collections.emptyList()
+                    : java.util.Arrays.asList(following.split(","))
+            );
+            String targetStr = targetId.toString();
+            boolean wasFollowing = list.contains(targetStr);
+            if (wasFollowing) { list.remove(targetStr); } else { list.add(targetStr); }
+            me.setFollowing(String.join(",", list));
+            userRepository.save(me);
+
+            java.util.Map<String, Object> res = new java.util.HashMap<>();
+            res.put("following", !wasFollowing);
+            res.put("followingList", me.getFollowing());
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("เกิดข้อผิดพลาด: " + e.getMessage());
+        }
+    }
+
+    // ✅ ดึง follower/following count
+    @GetMapping("/{id}/follow-stats")
+    public ResponseEntity<?> getFollowStats(@PathVariable Long id) {
+        try {
+            long followerCount = userRepository.findAll().stream()
+                .filter(u -> {
+                    String f = u.getFollowing();
+                    return f != null && !f.isEmpty() &&
+                        java.util.Arrays.asList(f.split(",")).contains(id.toString());
+                }).count();
+
+            UserEntity target = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("ไม่พบผู้ใช้งาน"));
+            String fw = target.getFollowing();
+            long followingCount = (fw == null || fw.isEmpty()) ? 0
+                : java.util.Arrays.stream(fw.split(",")).filter(s -> !s.isEmpty()).count();
+
+            java.util.Map<String, Object> res = new java.util.HashMap<>();
+            res.put("followers", followerCount);
+            res.put("following", followingCount);
+            return ResponseEntity.ok(res);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("เกิดข้อผิดพลาด: " + e.getMessage());
+        }
+    }
+
+    // ✅ Feed จาก user ที่ follow อยู่
+    @GetMapping("/me/feed")
+    public ResponseEntity<?> getFollowingFeed(
+            org.springframework.security.core.Authentication authentication) {
+        try {
+            UserEntity me = (UserEntity) authentication.getPrincipal();
+            String following = me.getFollowing();
+            if (following == null || following.isEmpty())
+                return ResponseEntity.ok(java.util.Collections.emptyList());
+
+            java.util.List<com.techup.spring_demo.entity.TripEntity> feed =
+                java.util.Arrays.stream(following.split(","))
+                    .filter(s -> !s.isEmpty())
+                    .flatMap(s -> {
+                        try { return tripServiceRef.getTripsByAuthor(Long.parseLong(s)).stream(); }
+                        catch (Exception e) { return java.util.stream.Stream.empty(); }
+                    })
+                    .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
+                    .collect(java.util.stream.Collectors.toList());
+
+            return ResponseEntity.ok(feed);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("เกิดข้อผิดพลาด: " + e.getMessage());
+        }
+    }
+
 }
