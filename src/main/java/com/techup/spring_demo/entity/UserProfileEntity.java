@@ -28,6 +28,22 @@ public class UserProfileEntity {
     @Column(name = "social_link", length = 255)
     private String socialLink;
 
+    // ✅ Social links แยกแต่ละ platform
+    @Column(name = "facebook_url", length = 255)
+    private String facebookUrl;
+
+    @Column(name = "instagram_url", length = 255)
+    private String instagramUrl;
+
+    @Column(name = "twitter_url", length = 255)
+    private String twitterUrl;
+
+    @Column(name = "tiktok_url", length = 255)
+    private String tiktokUrl;
+
+    @Column(name = "youtube_url", length = 255)
+    private String youtubeUrl;
+
     @Column(name = "cover_url", columnDefinition = "text")
     private String coverUrl;
 

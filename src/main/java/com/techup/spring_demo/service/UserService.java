@@ -73,6 +73,12 @@ public class UserService {
         if (updatedData.getProfile().getBirthdate() != null) profile.setBirthdate(updatedData.getProfile().getBirthdate());
         if (updatedData.getProfile().getSocialLink() != null) profile.setSocialLink(updatedData.getProfile().getSocialLink());
         if (updatedData.getProfile().getCoverUrl() != null) profile.setCoverUrl(updatedData.getProfile().getCoverUrl());
+        // ✅ Social links ใหม่
+        if (updatedData.getProfile().getFacebookUrl() != null) profile.setFacebookUrl(updatedData.getProfile().getFacebookUrl());
+        if (updatedData.getProfile().getInstagramUrl() != null) profile.setInstagramUrl(updatedData.getProfile().getInstagramUrl());
+        if (updatedData.getProfile().getTwitterUrl() != null) profile.setTwitterUrl(updatedData.getProfile().getTwitterUrl());
+        if (updatedData.getProfile().getTiktokUrl() != null) profile.setTiktokUrl(updatedData.getProfile().getTiktokUrl());
+        if (updatedData.getProfile().getYoutubeUrl() != null) profile.setYoutubeUrl(updatedData.getProfile().getYoutubeUrl());
 
         existingUser.setProfile(profile);
     }
