@@ -36,6 +36,9 @@ public class UserController {
     private JwtUtils jwtUtils;
 
     @Autowired
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
+    @Autowired
     private com.techup.spring_demo.service.TripService tripServiceRef;
 
     @Autowired
@@ -346,7 +349,53 @@ public class UserController {
         }
     }
 
-    // ✅ Toggle Follow / Unfollow
+    // ✅ เปลี่ยนรหัสผ่าน (เฉพาะ LOCAL account เท่านั้น)
+    @PutMapping("/me/password")
+    public ResponseEntity<?> changePassword(
+            @RequestBody java.util.Map<String, String> body,
+            org.springframework.security.core.Authentication authentication) {
+        try {
+            UserEntity me = (UserEntity) authentication.getPrincipal();
+
+            // เช็คว่าเป็น LOCAL account
+            if (me.getAuthProvider() != com.techup.spring_demo.entity.AuthProvider.LOCAL) {
+                return ResponseEntity.badRequest()
+                    .body("บัญชีที่ล็อกอินด้วย Google/Facebook ไม่สามารถเปลี่ยนรหัสผ่านได้");
+            }
+
+            String currentPassword = body.get("currentPassword");
+            String newPassword = body.get("newPassword");
+
+            if (currentPassword == null || newPassword == null || newPassword.length() < 6) {
+                return ResponseEntity.badRequest()
+                    .body("รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร");
+            }
+
+            // ตรวจสอบรหัสผ่านปัจจุบัน
+            if (!passwordEncoder.matches(currentPassword, me.getPassword())) {
+                return ResponseEntity.badRequest().body("รหัสผ่านปัจจุบันไม่ถูกต้อง");
+            }
+
+            me.setPassword(passwordEncoder.encode(newPassword));
+            userRepository.save(me);
+
+            return ResponseEntity.ok(java.util.Map.of("success", true, "message", "เปลี่ยนรหัสผ่านสำเร็จ"));
+
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("เกิดข้อผิดพลาด: " + e.getMessage());
+        }
+    }
+
+    // ✅ ดึงข้อมูล auth provider ของตัวเอง
+    @GetMapping("/me/auth-info")
+    public ResponseEntity<?> getAuthInfo(
+            org.springframework.security.core.Authentication authentication) {
+        UserEntity me = (UserEntity) authentication.getPrincipal();
+        java.util.Map<String, Object> res = new java.util.HashMap<>();
+        res.put("authProvider", me.getAuthProvider().toString());
+        res.put("isLocal", me.getAuthProvider() == com.techup.spring_demo.entity.AuthProvider.LOCAL);
+        return ResponseEntity.ok(res);
+    }
     @PostMapping("/{targetId}/follow")
     public ResponseEntity<?> toggleFollow(
             @PathVariable Long targetId,
